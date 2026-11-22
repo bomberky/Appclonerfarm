@@ -10,6 +10,16 @@ jobs:
       - name: Unzip project
         run: unzip AppLauncher.zip -d .
 
+      - name: List files (for debug)
+        run: |
+          echo "Содержимое корня:"
+          ls -la
+          echo "Содержимое папки app (если есть):"
+          ls -la app || echo "Папки app нет!"
+
+      - name: Create app directory if missing
+        run: mkdir -p app
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -21,22 +31,12 @@ jobs:
         with:
           packages: 'platform-tools'
 
-      # --- НОВЫЙ ШАГ: Генерация gradlew ---
       - name: Generate Gradle Wrapper
         run: |
-          # Ищем папку, где лежит build.gradle.kts (корень проекта)
           PROJECT_DIR=$(find . -name "build.gradle.kts" -maxdepth 2 -exec dirname {} \; | head -n 1)
-          if [ -z "$PROJECT_DIR" ]; then
-            echo "Не найден файл build.gradle.kts!"
-            exit 1
-          fi
-          echo "Проект найден в папке: $PROJECT_DIR"
           cd "$PROJECT_DIR"
-          
-          # Скачиваем Gradle и генерируем wrapper
           gradle wrapper --gradle-version 8.2
-      # -------------------------------------
-
+          
       - name: Build APK
         run: |
           PROJECT_DIR=$(find . -name "build.gradle.kts" -maxdepth 2 -exec dirname {} \; | head -n 1)
