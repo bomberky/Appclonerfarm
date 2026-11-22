@@ -10,10 +10,6 @@ jobs:
       - name: Unzip project
         run: unzip AppLauncher.zip -d .
 
-      - name: Find gradlew and set permissions
-        run: |
-          find . -name "gradlew" -exec chmod +x {} \;
-
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -25,17 +21,31 @@ jobs:
         with:
           packages: 'platform-tools'
 
+      # --- НОВЫЙ ШАГ: Генерация gradlew ---
+      - name: Generate Gradle Wrapper
+        run: |
+          # Ищем папку, где лежит build.gradle.kts (корень проекта)
+          PROJECT_DIR=$(find . -name "build.gradle.kts" -maxdepth 2 -exec dirname {} \; | head -n 1)
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "Не найден файл build.gradle.kts!"
+            exit 1
+          fi
+          echo "Проект найден в папке: $PROJECT_DIR"
+          cd "$PROJECT_DIR"
+          
+          # Скачиваем Gradle и генерируем wrapper
+          gradle wrapper --gradle-version 8.2
+      # -------------------------------------
+
       - name: Build APK
         run: |
-          if [ -f "gradlew" ]; then
-            ./gradlew assembleDebug
-          else
-            cd $(find . -name "gradlew" -exec dirname {} \; | head -n 1)
-            ./gradlew assembleDebug
-          fi
+          PROJECT_DIR=$(find . -name "build.gradle.kts" -maxdepth 2 -exec dirname {} \; | head -n 1)
+          cd "$PROJECT_DIR"
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
-          path: '**/app/build/outputs/apk/debug/app-debug.apk'
+          path: '**/app/build/outputs/apk/debug/*.apk'
